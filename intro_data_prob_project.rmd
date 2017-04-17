@@ -1,0 +1,276 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+```{r load-data}
+load("brfss2013.RData")
+```
+
+
+* * *
+
+## Part 1: Data
+The data is a collaborative effort between all 50 US states, participating US territories and the Centers for Disease Control and Prevention (CDC).  BRFSS is an ongoing surveillance system designed to measure behavioral risk factors for the non-institutionalized adult population (18 years of age and older) residing in the US.  The objective is to to collect uniform, state specific data on preventive health practices and risk behaviors that are linked to chronic diseases, injuries and preventable infectious diseases.  The data is collected by the BRFSS in an observational manner by performing telephone surveys.  In conducting landline telephone surveys, interviewers collect data from a randomly selected adult in a household.  In conducting cellphone surveys, the interviewers collect data from an adult who participates by using a cellphone and resides in a private residence or college housing.
+
+Since the data is collected by survey, the data does not show a causal connection and is generalizable.
+
+The data consists of 491,775 observations of 330 variables.
+
+* * *
+
+## Part 2: Research questions
+
+**Research quesion 1:**
+Do people who have been told that they are pre-diabetic or borderline diabetic consume soda or sugary drinks and how many vegetables per day to they tend to consume?  This question is of interest as I have heard that correlations exist between diabetes and consuming sugary drinks and soda but I have not seen actual data to support the claims.  In addition, eating more vegetables is often associated with less instances of diabetes and so I would like to see if that theory is supported by this data.
+
+**Research quesion 2:**
+Do people who get inadequate number of hours of sleep tend to have more days of poor physical health and have the ever been told their blood pressure is high?  This question is of interest to me as I believe that it is important to get adequate sleep to maintain good physical health.  It would be intesting to see if this data will support my belief.
+
+**Research quesion 3:**
+Do people who smoke often tend to exercise less?  This question is of interest to me because I know people who smoke and still exercise often with no apparent impact on their ability to exercise.
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+**Research quesion 1:**
+The variables to be used for this question are: 
+  vegeda1_: Computed Vegetable Intake in Times Per Day
+  ssbsugar:  How Often Do You Drink Regular Soda or Pop?
+  ssbfrut2:  How Often Did You Drink Sugar-Sweetened Drink?
+  prediab1:  Ever Been Told You Have Pre-Diabetes Or Borderline Diabetes?
+
+First, to view the data more clearly, we want to filter out unecessary variables by creating a new dataset called subtable that contains only the variables listed above.
+
+```{r}
+subtable <- select(brfss2013, vegeda1_, ssbsugar, ssbfrut2, prediab1)
+```
+
+Next, we filter out any NAs from the data and save in a new dataset called subtable_no_NA and view the new dataset to ensure no NAs are listed.
+
+```{r}
+subtable_no_NA <- filter(subtable, !is.na(vegeda1_))
+subtable_no_NA <- filter(subtable_no_NA, !is.na(ssbsugar))
+subtable_no_NA <- filter(subtable_no_NA, !is.na(ssbfrut2))
+subtable_no_NA <- filter(subtable_no_NA, !is.na(prediab1))
+```
+
+After that, the variables ssbsugar and ssbfrut2 are combined into a variable called sugar_drinks as they both are drinks containing sugar.
+
+```{r}
+subtable_no_NA2<-mutate(subtable_no_NA, sugar_drinks = ssbsugar + ssbfrut2)
+```
+
+The variable prediab1 is in yes/no format so the dataset subtable_no_NA2, is divided up into two datasets:  
+-pre_diab_yes: The people who responded "Yes" to having been told that they have pre-diabetes or borderline diabetes
+-pre_diab_no:  The people who responded "No" to having been told that they have pre-diabetes or borderline diabetes
+
+```{r}
+pre_diab_yes <- filter(subtable_no_NA2, prediab1 == "Yes")
+pre_diab_no <- filter(subtable_no_NA2, prediab1 == "No" )
+```
+
+Now the number of people who responded Yes or No to having been told they have pre-diabetes or borderline diabetes and how often they consume sugary drinks is analyzed.  
+```{r}
+summary(pre_diab_no$sugar_drinks)
+summary(pre_diab_yes$sugar_drinks)
+```
+
+The summary statistics tell us that people who responded to No on having pre-diabetes or borderline diabetes consumed a median of 301 and a mean of 245.6 sugary drinks, while the people who responded Yes on having pre-diabetes or borderline diabetes consumed a median of 204 and a mean of 230.2 sugary drinks.  
+
+
+A Histogram plot visually show us the number of people that answered yes or no to having pre-diabetes or borderline diabetes.
+
+```{r}
+ggplot(data = subtable_no_NA2, aes(x = prediab1)) +
+  geom_bar(aes(fill = prediab1)) +
+  xlab("Pre-Diabetes or Borderline Diabetes") + ylab("Number of Diabetes") + ggtitle("Number Pre-Diabetes or Borderline Diabetes")
+```
+
+
+A boxplot visually shows that the number of sugary drinks consumed distribution by people who answered no to having pre-diabetes or borderline diabetes is higher than those who answered yes to having diabetes or pre-diabetes.
+
+
+```{r}
+ggplot(data = subtable_no_NA2, aes(x = prediab1, y = sugar_drinks)) +
+  geom_boxplot(aes(fill = prediab1)) +
+  xlab("Pre-Diabetes or Borderline Diabetes") + ylab("Distribution of Sugary Drinks") + ggtitle("Distribution of Sugary Drinks vs. Pre-Diabetes or Borderline Diabetes")
+```
+
+Next, we want to see how many vegetables people who answered yes or no to having pre-diabetes or borderline diabetes consumed.  
+
+First the number of people who responded Yes or No to having been told they have pre-diabetes or borderline diabetes and how often they consume sugary drinks is analyzed.
+
+```{r}
+summary(pre_diab_no$vegeda1_)
+summary(pre_diab_yes$vegeda1_)
+```
+
+The summary statistics tell us that people who responded to No on having pre-diabetes or borderline diabetes consumed a median of 71 and a mean of 80.55 vegetables per day, while the people who responded Yes on having pre-diabetes or borderline diabetes consumed a median of 67 and a mean of 78.77 vegetables.  
+
+A box plot visually shows that the number of vegetables consumed distribution by people is much higher for those who answered no to having pre-diabetes or borderline diabetes than those who answered yes.
+
+```{r}
+ggplot(subtable_no_NA2,aes(subtable_no_NA2$prediab1,subtable_no_NA2$vegeda1_)) + geom_boxplot(aes(colour = subtable_no_NA2$prediab1)) +
+  xlab("Pre-Diabetes or Borderline Diabetes") + ylab("Distribution of Vegetables") + ggtitle("Distribution of Vegetables vs. Pre-Diabetes or Borderline Diabetes")
+```
+
+
+
+
+**Research quesion 2:**
+The variables to be used for this question are: 
+  sleptim1: How much time do you sleep?
+  physhlth:  Number of days physical health not good?
+  bphigh4:  Ever told blood pressure high?
+
+
+
+First, to view the data more clearly, we want to filter out unecessary variables.
+```{r}
+subtable_question2 <- select(brfss2013, sleptim1, physhlth, bphigh4)
+```
+
+Next, we filter out any NAs from the data and save in a new dataset called subtable_question2_no_NA and view the new dataset to ensure no NAs are listed.
+
+```{r}
+subtable_question2_no_NA <- filter(subtable_question2, !is.na(physhlth))
+subtable_question2_no_NA <- filter(subtable_question2_no_NA, !is.na(sleptim1))
+```
+
+The variable bphigh4 is in yes/no format so the dataset subtable_question2_no_NA, is divided up into two datasets:  
+-high_blood_pressure_yes: The people who responded "Yes" to having been told that they have ever been told that they have high blood pressure.
+-high_blood_pressure_no:  The people who responded "No" to having been told that they not ever been told that they have high blood pressure.
+
+```{r}
+high_blood_pressure_yes <- filter(subtable_question2_no_NA, bphigh4 == "Yes")
+high_blood_pressure_no <- filter(subtable_question2_no_NA, bphigh4 == "No" )
+```
+
+Now the number of people who responded Yes or No to having been told have high blood pressure is analyzed and how much time do you sleep and number of days physical health not good.
+
+
+```{r}
+summary(high_blood_pressure_yes$physhlth)
+summary(high_blood_pressure_no$physhlth)
+
+```
+
+The summary statistics tell us that people who responded to Yes on having been told have high blood pressure have a median of 0 days and mean of 6.083 days of physical health not good.  The people who have not been told that they have high blood pressure have a median of 0 days of poor physical health and a mean of 3.092 days of poor physical health.  
+
+A Histogram plot visually show us the number of people that answered yes or no to having been told whether or not they have high blood pressure.
+
+```{r}
+ggplot(data = subtable_question2_no_NA, aes(x = bphigh4)) +
+  geom_bar(aes(fill = bphigh4)) +
+  xlab("Have Ever Been Told Have High Blood Pressure") + ylab("Number") + ggtitle("Number Who Answered Yes or No to Having Been Told Have High Blood Pressure")
+```
+
+A boxplot visually shows that the distribution of number of days of poor physical health who answered yes to having been told have high blood pressure is higher than those who answered no to having been told have high blood pressure.
+
+```{r}
+ggplot(data = subtable_question2_no_NA, aes(x = bphigh4, y = physhlth)) +
+  geom_boxplot(aes(fill = bphigh4)) +
+  xlab("Have Ever Been Told Have High Blood Pressure") + ylab("Distribution of Number of Days of Poor Physical Health") + ggtitle("Distribution of Number of Days of Poor Physical Health vs. Ever Been Told Have High Blood Pressure")
+```
+
+```{r}
+summary(high_blood_pressure_yes$sleptim1)
+summary(high_blood_pressure_no$sleptim1)
+```
+
+People who have been told they have had high blood pressure sleep a median of 7 hours and a mean of 7.057 hours. People who have not been told they have high blood pressure slept a median of 7 hours and a mean of 7.047 hours.
+
+
+A boxplot visually shows that the number of hours slept for people who answered Yes to having been told they have high blood pressure is higher than those who answered no to having been told whether or not they have high blood pressure.
+
+```{r}
+ggplot(subtable_question2_no_NA,aes(subtable_question2_no_NA$bphigh4,subtable_question2_no_NA$physhlth)) + geom_boxplot(aes(colour = subtable_question2_no_NA$bphigh4)) +
+  xlab("Have Ever Been Told Have High Blood Pressure") + ylab("Distribution of Number of Days of Poor Physical Health") + ggtitle("Distribution of Number of Days of Poor Physical Health vs. Ever Been Told Have High Blood Pressure")
+```
+
+
+
+
+**Research quesion 3:**
+The variables to be used for this question are: 
+  smokday2:  Frequency of days now smoking
+  exerany2:  Exercise in past 30 days
+
+
+First, to view the data more clearly, we want to filter out unecessary variables.
+
+```{r}
+subtable_question3 <- select(brfss2013, smokday2, exerany2)
+```
+
+
+Next, we filter out any NAs from the data and save in a new dataset called subtable_question3_no_NA and view the new dataset to ensure no NAs are listed.
+
+```{r}
+subtable_question3_no_NA <- filter(subtable_question3, !is.na(smokday2))
+subtable_question3_no_NA <- filter(subtable_question3_no_NA, !is.na(exerany2))
+```
+
+The variable exerany2 is in yes/no format so the dataset subtable_question3_no_NA, is divided up into two datasets:  
+-exercise_yes: The people who responded "Yes" to having exercised in the past 30 days.
+-exercise_no:  The people who responded "No" to having exercised in the past 30 days.
+
+```{r}
+exercise_yes <- filter(subtable_question3_no_NA, exerany2 == "Yes")
+exercise_no <- filter(subtable_question3_no_NA, exerany2 == "No" )
+```
+
+Now the number of people who responded Yes or No to having been told having exercised in the past 30 days and the frequency of days now smoking is analyzed.
+
+```{r}
+summary(exercise_yes$smokday2)
+summary(exercise_no$smokday2)
+```
+
+We can see from the summary table that the number of people who answered Yes to having exercised in the past 30 days and answered that they smoke Every day is 31,231.  The number of people who answered Some days is 14,409 and the number of people who said Not at all is 95,505.
+
+The number of people who answered No to having exercised in the past 30 days and answered to having exercised in the past 30 days of Every day is 21,001.  The number of people who answered Some days is 5,833 and the number of people who answered Not at all is 37,072.
+
+A Histogram plot visually show us the number of people that answered yes or no to having exercised in the past 30 days.
+
+```{r}
+ggplot(data = subtable_question3_no_NA, aes(x = exerany2)) +
+  geom_bar(aes(fill = exerany2)) +
+  xlab("Have Exercised in the Past 30 Days") + ylab("Number") + ggtitle("Number Who Answered Yes or No to Having Exercised in the Past 30 Days")
+```
+
+Using another histogram plot, we can see the number of people who answered that they smoke every day, some days or not at all.
+
+```{r}
+ggplot(data = subtable_question3_no_NA, aes(x = smokday2)) +
+  geom_bar(aes(fill = smokday2)) +
+  xlab("How Often Smoke") + ylab("Number") + ggtitle("How Often People Who Answered Smoke")
+```
+
+
+A plot visually shows the number of people who answered either yes or no to having exercised in the past 30 days and if they smoked every day, some days or not at all.  It can be seen that people who answered yes to having exercised in the past 30 days answered not at all to having smoked most frequently.  People who answered no having exercised in the past 30 days answered smoke some days the least frequently according to the plot.  
+A significant portion of people who answered yes to having exercised in the past 30 days also answered yes to having smoke every day.
+
+```{r}
+ggplot(data = subtable_question3_no_NA, aes(x = exerany2, y = smokday2)) +
+  geom_count(aes(fill = exerany2)) +
+  xlab("Have Exercised in the Past 30 Days") + ylab("Distribution of Frequency of Days Now Smoking") + ggtitle("Distribution of Frequency of Days Now Smoking vs. Exercised in the Past 30 Days")
+```
+
